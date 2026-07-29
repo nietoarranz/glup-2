@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import { XIcon } from 'lucide-react'
+import { MapPinnedIcon, XIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   PopoverHeader,
@@ -30,6 +30,21 @@ type SelectedPlace = {
   name: string
   lng: number
   lat: number
+}
+
+function mapsAppUrl(lat: number, lng: number, name: string) {
+  const query = `${lat},${lng}`
+  const label = encodeURIComponent(name)
+  const ua = navigator.userAgent
+
+  // iOS: Apple Maps (system default). Android: geo: opens the default maps app.
+  if (/iPhone|iPad|iPod/i.test(ua)) {
+    return `https://maps.apple.com/?ll=${query}&q=${label}`
+  }
+  if (/Android/i.test(ua)) {
+    return `geo:0,0?q=${query}(${label})`
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${query}`
 }
 
 function createPlaceMarkerElement(kind: AmenityKind) {
@@ -327,6 +342,20 @@ export default function Map({ amenity, onBack }: MapProps) {
               <XIcon />
             </Button>
           </PopoverHeader>
+          <Button asChild size="sm" className="w-full">
+            <a
+              href={mapsAppUrl(
+                selectedPlace.lat,
+                selectedPlace.lng,
+                selectedPlace.name,
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <MapPinnedIcon data-icon="inline-start" />
+              Open in Maps App
+            </a>
+          </Button>
         </div>
       )}
     </div>
