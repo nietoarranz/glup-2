@@ -18,6 +18,10 @@ body,
   margin: 0;
 }
 
+body {
+  overflow: hidden;
+}
+
 code {
   font-family: 'Inter', sans-serif;
   font-size: 0.9em;
@@ -143,9 +147,9 @@ code {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-neutral-100 text-foreground;
   }
   html {
-    @apply font-sans;
+    @apply font-sans bg-neutral-100;
   }
 }

@@ -4,9 +4,16 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { MapPinnedIcon, XIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
+  Item,
+  ItemContent,
+  ItemMedia,
+  ItemTitle,
+} from '@/components/ui/item'
+import {
   PopoverHeader,
   PopoverTitle,
 } from '@/components/ui/popover'
+import { Spinner } from '@/components/ui/spinner'
 import fountainPinSvg from '../assets/fountain-pin.svg?raw'
 import toiletPinSvg from '../assets/toilet-pin.svg?raw'
 import {
@@ -73,6 +80,7 @@ export default function Map({ amenity, onBack }: MapProps) {
 
   const [showSearchHere, setShowSearchHere] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
+  const [searchError, setSearchError] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null)
   const [anchorPoint, setAnchorPoint] = useState<{ x: number; y: number } | null>(
     null,
@@ -184,16 +192,13 @@ export default function Map({ amenity, onBack }: MapProps) {
       }
     }
 
-    const searchAt = async (
-      lat: number,
-      lon: number,
-      { showLoading = true }: { showLoading?: boolean } = {},
-    ) => {
+    const searchAt = async (lat: number, lon: number) => {
       searchAbortRef.current?.abort()
       const abortController = new AbortController()
       searchAbortRef.current = abortController
 
-      if (showLoading) setIsSearching(true)
+      setIsSearching(true)
+      setSearchError(false)
       setShowSearchHere(false)
 
       try {
@@ -208,8 +213,9 @@ export default function Map({ amenity, onBack }: MapProps) {
       } catch (error) {
         if (abortController.signal.aborted) return
         console.error(`Could not load nearby ${amenity}`, error)
+        setSearchError(true)
       } finally {
-        if (!abortController.signal.aborted && showLoading) {
+        if (!abortController.signal.aborted) {
           setIsSearching(false)
         }
       }
@@ -239,7 +245,7 @@ export default function Map({ amenity, onBack }: MapProps) {
       hasInitialSearch = true
 
       const { latitude, longitude } = position.coords
-      void searchAt(latitude, longitude, { showLoading: false })
+      void searchAt(latitude, longitude)
     }
 
     const onGeolocateError = (error: GeolocationPositionError) => {
@@ -250,6 +256,7 @@ export default function Map({ amenity, onBack }: MapProps) {
     geolocate.on('error', onGeolocateError)
 
     map.once('load', () => {
+      map.resize()
       ignoreMoveEndRef.current = true
       geolocate.trigger()
     })
@@ -301,23 +308,35 @@ export default function Map({ amenity, onBack }: MapProps) {
         type="button"
         variant="outline"
         size="lg"
-        className="absolute top-4 left-4 z-10"
+        className="absolute top-[calc(1rem+env(safe-area-inset-top))] left-4 z-10"
         onClick={onBack}
       >
         ← Back
       </Button>
       <div className="map-container" ref={mapContainerRef} />
-      {(showSearchHere || isSearching) && (
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2"
-          onClick={handleSearchHere}
-          disabled={isSearching}
-        >
-          {isSearching ? 'Searching…' : 'Search here'}
-        </Button>
+      {isSearching ? (
+        <div className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 [--radius:1rem]">
+          <Item variant="muted" className="bg-background shadow-md">
+            <ItemMedia>
+              <Spinner />
+            </ItemMedia>
+            <ItemContent>
+              <ItemTitle className="line-clamp-1">Searching…</ItemTitle>
+            </ItemContent>
+          </Item>
+        </div>
+      ) : (
+        (showSearchHere || searchError) && (
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2"
+            onClick={handleSearchHere}
+          >
+            {searchError ? "Couldn't load places · Retry" : 'Search here'}
+          </Button>
+        )
       )}
 
       {selectedPlace && anchorPoint && (
